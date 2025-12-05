@@ -41,6 +41,9 @@
 
 #define DWC3_DEFAULT_AUTOSUSPEND_DELAY	500 /* ms */
 
+// 在 drivers/usb/dwc3/core.c 文件顶部（其他函数声明附近）添加：
+static int dwc3_core_init_mode(struct dwc3 *dwc);
+
 static int count;
 static struct dwc3 *dwc3_instance[DWC_CTRL_COUNT];
 
@@ -1603,34 +1606,44 @@ skip_clk_reset:
 	if (ret)
 		goto err2;
 
-	if (dwc3_is_otg_or_drd(dwc) ||
+if (dwc3_is_otg_or_drd(dwc) ||
 		dwc->dr_mode == USB_DR_MODE_PERIPHERAL) {
-		ret = dwc3_gadget_init(dwc);
-		if (ret) {
-			dev_err(dwc->dev, "gadget init failed %d\n", ret);
-			goto err3;
-		}
+	ret = dwc3_gadget_init(dwc);
+	if (ret) {
+		dev_err(dwc->dev, "gadget init failed %d\n", ret);
+		goto err3;
 	}
+}
 
-	dwc->dwc_ipc_log_ctxt = ipc_log_context_create(NUM_LOG_PAGES,
-					dev_name(dwc->dev), 0);
-	if (!dwc->dwc_ipc_log_ctxt)
-		dev_err(dwc->dev, "Error getting ipc_log_ctxt\n");
+dwc->dwc_ipc_log_ctxt = ipc_log_context_create(NUM_LOG_PAGES,
+				dev_name(dwc->dev), 0);
+if (!dwc->dwc_ipc_log_ctxt)
+	dev_err(dwc->dev, "Error getting ipc_log_ctxt\n");
 
-	snprintf(dma_ipc_log_ctx_name, sizeof(dma_ipc_log_ctx_name),
-					"%s.ep_events", dev_name(dwc->dev));
-	dwc->dwc_dma_ipc_log_ctxt = ipc_log_context_create(2 * NUM_LOG_PAGES,
-						dma_ipc_log_ctx_name, 0);
-	if (!dwc->dwc_dma_ipc_log_ctxt)
-		dev_err(dwc->dev, "Error getting ipc_log_ctxt for ep_events\n");
+snprintf(dma_ipc_log_ctx_name, sizeof(dma_ipc_log_ctx_name),
+				"%s.ep_events", dev_name(dwc->dev));
+dwc->dwc_dma_ipc_log_ctxt = ipc_log_context_create(2 * NUM_LOG_PAGES,
+					dma_ipc_log_ctx_name, 0);
+if (!dwc->dwc_dma_ipc_log_ctxt)
+	dev_err(dwc->dev, "Error getting ipc_log_ctxt for ep_events\n");
 
-	dwc3_instance[count] = dwc;
-	dwc->index = count;
-	count++;
+dwc3_instance[count] = dwc;
+dwc->index = count;
+count++;
 
-	pm_runtime_allow(dev);
-	dwc3_debugfs_init(dwc);
-	return 0;
+pm_runtime_allow(dev);
+dwc3_debugfs_init(dwc);
+
+// 从 linux-4.19.y 版本添加的内容
+// ret = dwc3_core_init_mode(dwc);
+// if (ret)
+//     goto err5;
+
+pm_runtime_put(dev);
+
+dma_set_max_seg_size(dev, UINT_MAX);
+
+return 0;
 
 err5:
 	dwc3_debugfs_exit(dwc);
