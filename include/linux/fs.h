@@ -306,14 +306,14 @@ enum rw_hint {
 #define IOCB_NOWAIT		(__force int) RWF_NOWAIT
 #define IOCB_APPEND		(__force int) RWF_APPEND
 
-/* non-RWF related bits - start at 16 */
+/* non-RWF related bits - start at 16 to avoid overlap with RWF flags */
 #define IOCB_EVENTFD		(1 << 16)
 #define IOCB_DIRECT		(1 << 17)
 #define IOCB_WRITE		(1 << 18)
 /* iocb->ki_waitq is valid */
 #define IOCB_WAITQ		(1 << 19)
 #define IOCB_NOIO		(1 << 20)
-
+#define IOCB_AIO_RW		(1 << 23)  
 struct kiocb {
 	struct file		*ki_filp;
 
