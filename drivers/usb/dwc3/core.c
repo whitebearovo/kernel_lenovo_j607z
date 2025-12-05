@@ -41,9 +41,6 @@
 
 #define DWC3_DEFAULT_AUTOSUSPEND_DELAY	500 /* ms */
 
-// 在 drivers/usb/dwc3/core.c 文件顶部（其他函数声明附近）添加：
-static int dwc3_core_init_mode(struct dwc3 *dwc);
-
 static int count;
 static struct dwc3 *dwc3_instance[DWC_CTRL_COUNT];
 
@@ -377,6 +374,13 @@ static void dwc3_free_event_buffers(struct dwc3 *dwc)
 static int dwc3_alloc_event_buffers(struct dwc3 *dwc, unsigned length)
 {
 	struct dwc3_event_buffer *evt;
+	unsigned int hw_mode;
+
+	hw_mode = DWC3_GHWPARAMS0_MODE(dwc->hwparams.hwparams0);
+	if (hw_mode == DWC3_GHWPARAMS0_MODE_HOST) {
+		dwc->ev_buf = NULL;
+		return 0;
+	}
 
 	evt = dwc3_alloc_one_event_buffer(dwc, length);
 	if (IS_ERR(evt)) {
@@ -399,6 +403,10 @@ static int dwc3_alloc_event_buffers(struct dwc3 *dwc, unsigned length)
 int dwc3_event_buffers_setup(struct dwc3 *dwc)
 {
 	struct dwc3_event_buffer	*evt;
+	u32				reg;
+
+	if (!dwc->ev_buf)
+		return 0;
 
 	evt = dwc->ev_buf;
 	evt->lpos = 0;
@@ -408,7 +416,10 @@ int dwc3_event_buffers_setup(struct dwc3 *dwc)
 			upper_32_bits(evt->dma));
 	dwc3_writel(dwc->regs, DWC3_GEVNTSIZ(0),
 			DWC3_GEVNTSIZ_SIZE(evt->length));
-	dwc3_writel(dwc->regs, DWC3_GEVNTCOUNT(0), 0);
+
+	/* Clear any stale event */
+	reg = dwc3_readl(dwc->regs, DWC3_GEVNTCOUNT(0));
+	dwc3_writel(dwc->regs, DWC3_GEVNTCOUNT(0), reg);
 
 	/* setup GSI related event buffers */
 	dwc3_notify_event(dwc, DWC3_GSI_EVT_BUF_SETUP, 0);
@@ -418,6 +429,17 @@ int dwc3_event_buffers_setup(struct dwc3 *dwc)
 void dwc3_event_buffers_cleanup(struct dwc3 *dwc)
 {
 	struct dwc3_event_buffer	*evt;
+	u32				reg;
+
+	if (!dwc->ev_buf)
+		return;
+	/*
+	 * Exynos platforms may not be able to access event buffer if the
+	 * controller failed to halt on dwc3_core_exit().
+	 */
+	reg = dwc3_readl(dwc->regs, DWC3_DSTS);
+	if (!(reg & DWC3_DSTS_DEVCTRLHLT))
+		return;
 
 	evt = dwc->ev_buf;
 
@@ -427,7 +449,10 @@ void dwc3_event_buffers_cleanup(struct dwc3 *dwc)
 	dwc3_writel(dwc->regs, DWC3_GEVNTADRHI(0), 0);
 	dwc3_writel(dwc->regs, DWC3_GEVNTSIZ(0), DWC3_GEVNTSIZ_INTMASK
 			| DWC3_GEVNTSIZ_SIZE(0));
-	dwc3_writel(dwc->regs, DWC3_GEVNTCOUNT(0), 0);
+
+	/* Clear any stale event */
+	reg = dwc3_readl(dwc->regs, DWC3_GEVNTCOUNT(0));
+	dwc3_writel(dwc->regs, DWC3_GEVNTCOUNT(0), reg);
 
 	/* cleanup GSI related event buffers */
 	dwc3_notify_event(dwc, DWC3_GSI_EVT_BUF_CLEANUP, 0);
@@ -1024,8 +1049,6 @@ int dwc3_core_init(struct dwc3 *dwc)
 		dwc3_writel(dwc->regs, DWC3_GUCTL1, reg);
 	}
 
-	
-
 	/*
 	 * Must config both number of packets and max burst settings to enable
 	 * RX and/or TX threshold.
@@ -1569,63 +1592,37 @@ skip_clk_reset:
 	if (ret)
 		goto err2;
 
-if (dwc3_is_otg_or_drd(dwc) ||
+	if (dwc3_is_otg_or_drd(dwc) ||
 		dwc->dr_mode == USB_DR_MODE_PERIPHERAL) {
-	ret = dwc3_gadget_init(dwc);
-	if (ret) {
-		dev_err(dwc->dev, "gadget init failed %d\n", ret);
-		goto err3;
+		ret = dwc3_gadget_init(dwc);
+		if (ret) {
+			dev_err(dwc->dev, "gadget init failed %d\n", ret);
+			goto err3;
+		}
 	}
-}
 
-dwc->dwc_ipc_log_ctxt = ipc_log_context_create(NUM_LOG_PAGES,
-				dev_name(dwc->dev), 0);
-if (!dwc->dwc_ipc_log_ctxt)
-	dev_err(dwc->dev, "Error getting ipc_log_ctxt\n");
+	dwc->dwc_ipc_log_ctxt = ipc_log_context_create(NUM_LOG_PAGES,
+					dev_name(dwc->dev), 0);
+	if (!dwc->dwc_ipc_log_ctxt)
+		dev_err(dwc->dev, "Error getting ipc_log_ctxt\n");
 
-snprintf(dma_ipc_log_ctx_name, sizeof(dma_ipc_log_ctx_name),
-				"%s.ep_events", dev_name(dwc->dev));
-dwc->dwc_dma_ipc_log_ctxt = ipc_log_context_create(2 * NUM_LOG_PAGES,
-					dma_ipc_log_ctx_name, 0);
-if (!dwc->dwc_dma_ipc_log_ctxt)
-	dev_err(dwc->dev, "Error getting ipc_log_ctxt for ep_events\n");
+	snprintf(dma_ipc_log_ctx_name, sizeof(dma_ipc_log_ctx_name),
+					"%s.ep_events", dev_name(dwc->dev));
+	dwc->dwc_dma_ipc_log_ctxt = ipc_log_context_create(2 * NUM_LOG_PAGES,
+						dma_ipc_log_ctx_name, 0);
+	if (!dwc->dwc_dma_ipc_log_ctxt)
+		dev_err(dwc->dev, "Error getting ipc_log_ctxt for ep_events\n");
 
-dwc3_instance[count] = dwc;
-dwc->index = count;
-count++;
+	dwc3_instance[count] = dwc;
+	dwc->index = count;
+	count++;
 
-pm_runtime_allow(dev);
-dwc3_debugfs_init(dwc);
+	pm_runtime_allow(dev);
+	dwc3_debugfs_init(dwc);
 
-// 从 linux-4.19.y 版本添加的内容
-// ret = dwc3_core_init_mode(dwc);
-// if (ret)
-//     goto err5;
+	dma_set_max_seg_size(dev, UINT_MAX);
 
-pm_runtime_put(dev);
-
-dma_set_max_seg_size(dev, UINT_MAX);
-
-return 0;
-
-err5:
-	dwc3_debugfs_exit(dwc);
-	dwc3_event_buffers_cleanup(dwc);
-
-	usb_phy_set_suspend(dwc->usb2_phy, 1);
-	usb_phy_set_suspend(dwc->usb3_phy, 1);
-	phy_power_off(dwc->usb2_generic_phy);
-	phy_power_off(dwc->usb3_generic_phy);
-
-	usb_phy_shutdown(dwc->usb2_phy);
-	usb_phy_shutdown(dwc->usb3_phy);
-	phy_exit(dwc->usb2_generic_phy);
-	phy_exit(dwc->usb3_generic_phy);
-
-	dwc3_ulpi_exit(dwc);
-
-err4:
-	dwc3_free_scratch_buffers(dwc);
+	return 0;
 
 err3:
 	dwc3_free_scratch_buffers(dwc);
@@ -1881,7 +1878,11 @@ static int dwc3_runtime_resume(struct device *dev)
 
 	switch (dwc->current_dr_role) {
 	case DWC3_GCTL_PRTCAP_DEVICE:
-		dwc3_gadget_process_pending_events(dwc);
+		if (dwc->pending_events) {
+			pm_runtime_put(dwc->dev);
+			dwc->pending_events = false;
+			enable_irq(dwc->irq_gadget);
+		}
 		break;
 	case DWC3_GCTL_PRTCAP_HOST:
 	default:
@@ -1971,6 +1972,12 @@ runtime_set_active:
 
 static const struct dev_pm_ops dwc3_dev_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(dwc3_suspend, dwc3_resume)
+
+	/*
+	 * Runtime suspend halts the controller on disconnection. It relies on
+	 * platforms with custom connection notification to start the controller
+	 * again.
+	 */
 	SET_RUNTIME_PM_OPS(dwc3_runtime_suspend, dwc3_runtime_resume,
 			dwc3_runtime_idle)
 };
