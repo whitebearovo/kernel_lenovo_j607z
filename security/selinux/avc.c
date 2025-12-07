@@ -182,6 +182,9 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
 	int rc;
 	char *scontext;
 	u32 scontext_len;
+#ifdef CONFIG_KSU_SUSFS
+	struct selinux_audit_data sad;
+#endif
 
 	rc = security_sid_to_context(state, ssid, &scontext, &scontext_len);
 #ifdef CONFIG_KSU_SUSFS
@@ -200,6 +203,9 @@ static void avc_dump_query(struct audit_buffer *ab, struct selinux_state *state,
 		kfree(scontext);
 	}
 
+#ifdef CONFIG_KSU_SUSFS
+bypass_orig_flow:
+#endif
 	rc = security_sid_to_context(state, tsid, &scontext, &scontext_len);
 	if (rc)
 		audit_log_format(ab, " tsid=%d", tsid);
