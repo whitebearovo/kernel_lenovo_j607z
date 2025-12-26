@@ -7,7 +7,7 @@
 
 #install requirements
 sudo apt update
-sudo apt install cpio bc flex ccache
+sudo apt install cpio bc flex ccache kmod
 #install old kmod
 wget https://www.kernel.org/pub/linux/utils/kernel/kmod/kmod-26.tar.xz
 tar -xf kmod-26.tar.xz
