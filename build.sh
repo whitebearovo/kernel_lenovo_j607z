@@ -53,7 +53,7 @@ export KBUILD_BUILD_HOST=Mahiru-Codespace
 export KBUILD_BUILD_USER=mahirunoinu
 
 # 生成配置文件
-make ARCH=arm64 O=$OUT_DIR CC=$CC vendor/arnoz_row_lte-perf_defconfig
+make ARCH=arm64 O=$OUT_DIR CC=$CC vendor/arnoz_defconfig
 
 ccache make ARCH=arm64 O=$OUT_DIR CC=$CC -j14 2>&1 | tee /workspaces/kernel_lenovo_J607Z/out/kernel_log.log
 
