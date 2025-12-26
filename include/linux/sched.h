@@ -1489,6 +1489,19 @@ struct task_struct {
 	struct task_struct		*simple_lmk_next;
 #endif
 
+#ifdef CONFIG_KSU_SUSFS
+#ifdef ANDROID_KABI_RESERVE
+	ANDROID_KABI_USE(6, u64 susfs_task_state);
+#else
+	u64				susfs_task_state;
+#endif
+#ifdef ANDROID_KABI_RESERVE
+	ANDROID_KABI_USE(8, u64 susfs_last_fake_mnt_id);
+#else
+	u64				susfs_last_fake_mnt_id;
+#endif
+#endif
+
 	/*
 	 * New fields for task_struct should be added above here, so that
 	 * they are included in the randomized portion of task_struct.
