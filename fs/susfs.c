@@ -651,6 +651,25 @@ out_free_pathname:
 #endif // #ifdef CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT
 #endif // #ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
 
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+void susfs_reorder_mnt_id(void)
+{
+	/* Placeholder: reorder mount ids if needed. Currently no-op. */
+}
+#endif
+
+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
+void susfs_run_sus_path_loop(uid_t uid)
+{
+	/* Placeholder: previously handled path loop; no-op to satisfy linker. */
+}
+#endif
+
+void susfs_set_current_proc_umounted(void)
+{
+	/* Placeholder: mark current process as umounted; no-op. */
+}
+
 /* spoof_uname */
 #ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
 static spinlock_t susfs_uname_spin_lock;

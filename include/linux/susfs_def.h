@@ -6,6 +6,8 @@
 /********/
 /* ENUM */
 /********/
+/* magic for reboot-based SUSFS command gate */
+#define SUSFS_MAGIC 0x53555346 /* 'SUSF' */
 /* shared with userspace ksu_susfs tool */
 #define CMD_SUSFS_ADD_SUS_PATH 0x55550
 #define CMD_SUSFS_ADD_SUS_MOUNT 0x55560

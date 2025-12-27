@@ -37,6 +37,9 @@ struct user_arg_ptr {
 int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 							 struct user_arg_ptr *argv,
 							 struct user_arg_ptr *envp, int *flags);
+
+int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,
+			  size_t *count_ptr, loff_t **pos);
 #endif // #ifdef CONFIG_KSU_SUSFS
 
 #endif

@@ -183,4 +183,13 @@ int susfs_sus_su(struct st_sus_su* __user user_info);
 /* susfs_init */
 void susfs_init(void);
 
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+void susfs_reorder_mnt_id(void);
+#endif
+
+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
+void susfs_run_sus_path_loop(uid_t uid);
+#endif
+
+void susfs_set_current_proc_umounted(void);
 #endif
