@@ -16,6 +16,11 @@ cd kmod-26
 make
 sudo make install
 
+#clone the resukisu into kernel tree
+curl -LSs "https://raw.githubusercontent.com/whitebearovo/ReSukiSU/main/kernel/setup.sh" | bash -s sukisu-mahiru
+#you need to run the script to add resukisu to kernel tree before build
+#dont try to copy the files manually it  because its not allowed
+
 make clean
 make mrproper
 
