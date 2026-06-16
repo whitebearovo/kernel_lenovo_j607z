@@ -25,6 +25,10 @@
 #include <linux/netfilter_ipv6.h>
 #include <linux/skbuff.h>
 #include <linux/spinlock.h>
+#include <linux/ip.h>        
+#include <linux/ipv6.h>     
+#include <net/arp.h>           
+#include <net/neighbour.h>     
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0))
 static int s_debug = 0;
